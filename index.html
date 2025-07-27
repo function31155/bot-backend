@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>DPbot Secure Test Environment</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #1a1a2e;
+            color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .container {
+            background-color: #16213e;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 800px;
+        }
+        .hidden { display: none; }
+        h2 { color: #e94560; }
+        button.register {
+            background-color: #888; /* สีเริ่มต้น (เทา) */
+            color: #ccc;
+            cursor: not-allowed;
+            border: none;
+            padding: 12px 20px;
+            margin: 8px;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: background-color 0.5s ease;
+        }
+        button.register.enabled {
+            background-color: #28a745; /* สีเขียวเมื่อกดได้ */
+            color: white;
+            cursor: pointer;
+        }
+        button.register.enabled:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="main-container" class="container hidden">
+        <div id="page-register" class="page active">
+            <h2>Welcome to DPbot Test Rocket</h2>
+            <p id="countdown-text">Register button will be active in <span id="countdown-timer">5</span>s</p>
+            <button class="register">Register</button>
+        </div>
+        </div>
+
+    <div id="enable-bot-prompt" class="container">
+        <h2>Please Enable DPbot Extension</h2>
+        <p>This test page requires the DPbot extension to be active. Please turn on the bot from the extension popup.</p>
+    </div>
+
+    <script>
+        // --- ส่วนตรวจสอบการทำงานของบอท ---
+        const mainContainer = document.getElementById('main-container');
+        const enableBotPrompt = document.getElementById('enable-bot-prompt');
+        const registerBtn = document.querySelector('.register');
+        const countdownText = document.getElementById('countdown-text');
+        const countdownTimer = document.getElementById('countdown-timer');
+
+        // ฟังก์ชันเช็คว่าบอททำงานหรือไม่
+        const checkForBot = setInterval(() => {
+            // เราจะให้บอทสร้าง "รอยเท้า" ทิ้งไว้บนหน้าเว็บ
+            if (document.body.dataset.dpbotEnabled === 'true') {
+                clearInterval(checkForBot); // หยุดการตรวจสอบ
+                enableBotPrompt.classList.add('hidden'); // ซ่อนข้อความเตือน
+                mainContainer.classList.remove('hidden'); // แสดงเว็บเทส
+                startCountdown(); // เริ่มนับถอยหลัง
+            }
+        }, 500); // ตรวจสอบทุกครึ่งวินาที
+
+        // --- ฟังก์ชันนับถอยหลังและเปลี่ยนสีปุ่ม ---
+        function startCountdown() {
+            let seconds = 5;
+            timerSpan.textContent = seconds;
+
+            const interval = setInterval(() => {
+                seconds--;
+                timerSpan.textContent = seconds;
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    countdownText.textContent = 'Register is now open!';
+                    registerBtn.classList.add('enabled'); // เพิ่ม class เพื่อเปลี่ยนสี
+                    registerBtn.disabled = false;
+                }
+            }, 1000);
+        }
+
+        // --- ส่วน Logic การเปลี่ยนหน้า (เหมือนเดิม) ---
+    </script>
+</body>
+</html>
