@@ -35,29 +35,48 @@ app.post('/api/verify', async (req, res) => {
 
         const user = userResult.rows[0];
 
-        // 2. Check registered devices for this user
+        // 2. CHECK EXPIRATION DATE                                     <--- เพิ่มส่วนนี้
+        const expirationDate = new Date(user.expiration_date);
+        const now = new Date();
+
+        if (now > expirationDate) {
+            return res.json({ ok: false, reason: "license_expired" });
+        }
+        // END OF EXPIRATION CHECK                                       <--- สิ้นสุดส่วนที่เพิ่ม
+
+        // 3. Check registered devices for this user
         const devicesResult = await pool.query(
             'SELECT * FROM devices WHERE user_id = $1',
             [user.id]
         );
         const registeredDevices = devicesResult.rows;
 
-        // 3. Check if current machine is already registered
+        // 4. Check if current machine is already registered
         const isMachineRegistered = registeredDevices.some(device => device.machine_id === machine_id);
 
         if (isMachineRegistered) {
             // Machine is known, login successful
-            return res.json({ ok: true, message: "Login successful.", max_tabs: user.max_tabs });
+            return res.json({ 
+                ok: true, 
+                message: "Login successful.", 
+                max_tabs: user.max_tabs,
+                expirationDate: user.expiration_date // <--- แก้ไขส่วนนี้
+            });
         }
 
-        // 4. If it's a new machine, check if there is a free slot
+        // 5. If it's a new machine, check if there is a free slot
         if (registeredDevices.length < user.device_limit) {
             // Add the new machine and login
             await pool.query(
                 'INSERT INTO devices(user_id, machine_id) VALUES($1, $2)',
                 [user.id, machine_id]
             );
-            return res.json({ ok: true, message: "New device registered.", max_tabs: user.max_tabs });
+            return res.json({ 
+                ok: true, 
+                message: "New device registered.", 
+                max_tabs: user.max_tabs,
+                expirationDate: user.expiration_date // <--- แก้ไขส่วนนี้
+            });
         } else {
             // Device limit reached
             return res.json({ ok: false, reason: "device_limit_reached" });
@@ -70,4 +89,5 @@ app.post('/api/verify', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
