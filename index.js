@@ -8,7 +8,7 @@ app.use(express.json());
 
 // Database Connection
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL, // Render จะตั้งค่านี้ให้เอง
+  connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
   }
@@ -35,14 +35,14 @@ app.post('/api/verify', async (req, res) => {
 
         const user = userResult.rows[0];
 
-        // 2. CHECK EXPIRATION DATE                                     <--- เพิ่มส่วนนี้
+        // 2. CHECK EXPIRATION DATE
         const expirationDate = new Date(user.expiration_date);
         const now = new Date();
 
         if (now > expirationDate) {
             return res.json({ ok: false, reason: "license_expired" });
         }
-        // END OF EXPIRATION CHECK                                       <--- สิ้นสุดส่วนที่เพิ่ม
+        // END OF EXPIRATION CHECK
 
         // 3. Check registered devices for this user
         const devicesResult = await pool.query(
@@ -60,7 +60,7 @@ app.post('/api/verify', async (req, res) => {
                 ok: true, 
                 message: "Login successful.", 
                 max_tabs: user.max_tabs,
-                expirationDate: user.expiration_date // <--- แก้ไขส่วนนี้
+                expirationDate: user.expiration_date
             });
         }
 
@@ -75,7 +75,7 @@ app.post('/api/verify', async (req, res) => {
                 ok: true, 
                 message: "New device registered.", 
                 max_tabs: user.max_tabs,
-                expirationDate: user.expiration_date // <--- แก้ไขส่วนนี้
+                expirationDate: user.expiration_date
             });
         } else {
             // Device limit reached
@@ -87,6 +87,43 @@ app.post('/api/verify', async (req, res) => {
         res.status(500).json({ ok: false, reason: "server_error" });
     }
 });
+
+// Add Reset Devices Endpoint
+app.post('/api/reset-devices', async (req, res) => {
+    const { email, license_key } = req.body;
+
+    if (!email || !license_key) {
+        return res.status(400).json({ ok: false, reason: "missing_credentials" });
+    }
+
+    try {
+        // 1. Verify user credentials first
+        const userResult = await pool.query(
+            'SELECT id FROM users WHERE email = $1 AND license_key = $2',
+            [email, license_key]
+        );
+
+        if (userResult.rowCount === 0) {
+            return res.json({ ok: false, reason: "invalid_credentials" });
+        }
+
+        const user = userResult.rows[0];
+
+        // 2. Delete all devices associated with this user
+        await pool.query(
+            'DELETE FROM devices WHERE user_id = $1',
+            [user.id]
+        );
+
+        // 3. Send success response
+        res.json({ ok: true, message: "All registered devices have been reset." });
+
+    } catch (error) {
+        console.error("Device reset error:", error);
+        res.status(500).json({ ok: false, reason: "server_error" });
+    }
+});
+
 
 const PORT = process.env.PORT || 3000;
 
